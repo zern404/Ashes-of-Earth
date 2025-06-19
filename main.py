@@ -2,52 +2,60 @@ import pygame
 import sys 
 
 
-WIDTH, HEIGHT = 1000, 800
+WIDTH, HEIGHT = 1980, 1200
 WORLD_W = 3000
 WORLD_H = 2000
+
+player_sprite_stay = pygame.image.load("assets/player/stay.png")
+player_sprite_go = pygame.image.load("assets/player/go.png")
 
 class Player:
     def __init__(self, frame, world, x=WIDTH/2, y=HEIGHT/2):
         self.x = x
         self.y = y
-
         self.frame = frame
         self.world = world
-        
-        self.speed = 10
-        self.size_player = 30
-        self.color = (255, 255, 255)
 
-    def handle_keyboard(self):
+        self.speed = 5
+        self.size_player = (125, 125)
+
+        self.player_sprite_stay = pygame.transform.scale(player_sprite_stay, self.size_player)
+        self.player_sprite_go = pygame.transform.scale(player_sprite_go, self.size_player)
+
+        self.players_sprite = [self.player_sprite_stay, self.player_sprite_go]
+        self.anim_index = 0
+        self.anim_timer = 0
+        self.anim_speed = 10  
+
+    def handle_controller(self):
         kb = pygame.key.get_pressed()
+        moved = False
+
         if kb[pygame.K_w]:
             self.y -= self.speed
-            self.color = (155, 155, 255)
+            moved = True
         elif kb[pygame.K_s]:
             self.y += self.speed
-            self.color = (155, 155, 255)
+            moved = True
         elif kb[pygame.K_d]:
             self.x += self.speed
-            self.color = (155, 155, 255)
+            moved = True
         elif kb[pygame.K_a]:
             self.x -= self.speed
-            self.color = (155, 155, 255)
+            moved = True
+
+        if moved:
+            self.move_animate_player()
         else:
-            self.color = (255, 255, 255)
-    
-    def camera_offset(self):
-        camera_x = self.x - WIDTH // 2
-        camera_y = self.y - HEIGHT // 2
+            self.frame.blit(self.player_sprite_stay, (int(self.x), int(self.y)))
 
-        camera_x = max(0, min(camera_x, WORLD_W - WIDTH))
-        camera_y = max(0, min(camera_y, WORLD_H - HEIGHT))
+    def move_animate_player(self):
+        self.anim_timer += 1
+        if self.anim_timer >= self.anim_speed:
+            self.anim_timer = 0
+            self.anim_index = (self.anim_index + 1) % len(self.players_sprite)
 
-        return camera_x, camera_y
-
-
-    def draw_player(self, offset):
-        screen_pos = (int(self.x - offset[0]), int(self.y - offset[1]))
-        pygame.draw.circle(self.world, self.color, screen_pos, self.size_player)
+        self.frame.blit(self.players_sprite[self.anim_index], (int(self.x), int(self.y)))
 
 class Game:
     def __init__(self):
@@ -70,9 +78,8 @@ class Game:
         
         return offset
 
-    def handle_player(self, offset):
-        self.player.handle_keyboard()
-        self.player.draw_player(offset)
+    def handle_player(self):
+        self.player.handle_controller()
 
     def main(self):
         while self.running:
@@ -81,15 +88,11 @@ class Game:
                     if event.type == pygame.QUIT:
                         self.running = False
                         sys.exit()
-
-                self.world.fill((20, 20, 20))
-                offset = self.player.camera_offset()
-
-                self.handle_player(offset)  
+                self.screen.fill((20, 20, 20))
+                self.handle_player()  
             except Exception as e:
                 print(f"Error in main cycle: {e}")
             finally:
-                self.screen.blit(self.world, (0, 0), area=pygame.Rect(offset[0], offset[1], WIDTH, HEIGHT))
                 pygame.display.flip()
                 self.clock.tick(60)
 
